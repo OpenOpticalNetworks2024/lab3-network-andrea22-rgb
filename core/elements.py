@@ -1,76 +1,95 @@
 import json
 
 class Signal_information(object):
-    def __init__(self):
-        pass
+    def __init__(self,s_p:float,paths:list):
+        self._signal_power = s_p
+        self._noise_power = 0.0
+        self._latency = 0.0
+        self._path = paths
 
     @property
     def signal_power(self):
-        pass
+        return self._signal_power
 
-    def update_signal_power(self):
-        pass
+    def update_signal_power(self,inc):
+        self._signal_power += inc
 
     @property
     def noise_power(self):
-        pass
+        return self._noise_power
 
     @noise_power.setter
-    def noise_power(self):
-        pass
+    def noise_power(self,val):
+        self._noise_power = val
 
-    def update_noise_power(self):
-        pass
+    def update_noise_power(self,inc):
+        self._noise_power += inc
 
     @property
     def latency(self):
-        pass
+        return self._latency
 
     @latency.setter
-    def latency(self):
-        pass
+    def latency(self,val):
+        self._latency = val
 
-    def update_latency(self):
-        pass
+    def update_latency(self,inc):
+        self._latency += inc
 
     @property
     def path(self):
-        pass
+        return self._path
 
     @path.setter
-    def path(self):
-        pass
+    def path(self,value):
+        self._path = value
 
     def update_path(self):
-        pass
+        if self._path:
+            self._path.pop(0)
 
 
 class Node(object):
-    def __init__(self):
-        pass
+    def __init__(self,node_data:dict):
+        self._label = node_data['label']
+        self._position = tuple(node_data['position'])
+        self._connected_nodes = node_data['connected_nodes']
+        self._successive = {}
 
     @property
     def label(self):
-        pass
+        return  self._label
 
     @property
     def position(self):
-        pass
+        return self._position
 
     @property
     def connected_nodes(self):
-        pass
+        return self._connected_nodes
 
     @property
     def successive(self):
-        pass
+        return self._successive
 
     @successive.setter
-    def successive(self):
-        pass
+    def successive(self,val):
+        self._successive = val
 
-    def propagate(self):
-        pass
+    def propagate(self,sig_info : Signal_information):
+        if sig_info.path:
+            first_node = sig_info.path[0]
+
+            # Check if the current node is the first in the signal's path
+            if first_node == self.label:
+                sig_info.update_path()
+                if sig_info.path:
+                    next_node_label = sig_info.path[0]
+
+                    # If the next node exists in successive, propagate to it
+                    if next_node_label in self._successive:
+                        next_node = self._successive[next_node_label]
+                        next_node.propagate(sig_info)
 
 
 class Line(object):
