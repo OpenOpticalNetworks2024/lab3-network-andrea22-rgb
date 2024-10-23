@@ -17,6 +17,7 @@ file_input = INPUT_FOLDER / 'nodes.json'
 # Then propagate a Signal Information object of 1mW in the network and save the results in a dataframe.
 # Convert this dataframe in a csv file called 'weighted_path' and finally plot the network.
 # Follow all the instructions in README.md file
+# USE THE ROOT TO OPEN THE JSON FILE
 with open('/home/andrea/Desktop/OOn/lab3-network-andrea22-rgb/resources/nodes.json','r') as file:
     network_data = json.load(file)
 
