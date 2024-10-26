@@ -1,5 +1,8 @@
 import json
+import math
 
+from matplotlib import pyplot as plt
+from . import parameters
 class Signal_information(object):
     def __init__(self,s_p:float,paths:list):
         self._signal_power = s_p
@@ -74,7 +77,7 @@ class Node(object):
 
     @successive.setter
     def successive(self,val):
-        self._successive = val
+        self._successive.update(val)
 
     def propagate(self,sig_info : Signal_information):
         if sig_info.path:
@@ -93,61 +96,123 @@ class Node(object):
 
 
 class Line(object):
-    def __init__(self):
-        pass
+    def __init__(self,lbl:str,len:float):
+        self._label = lbl
+        self._length = len
+        self._successive = {}
 
     @property
     def label(self):
-        pass
+        return self._label
 
     @property
     def length(self):
-        pass
+        return self._length
 
     @property
     def successive(self):
-        pass
+        return self._successive
 
     @successive.setter
-    def successive(self):
-        pass
+    def successive(self,val):
+        self._successive.update(val)
 
     def latency_generation(self):
-        pass
+        latency = 2/3 * parameters.c * self._length
+        return latency
+    def noise_generation(self,sig_info = Signal_information):
+        noise = 1*10**(-9)* sig_info.signal_power *self._length
+        return noise
 
-    def noise_generation(self):
-        pass
-
-    def propagate(self):
-        pass
+    def propagate(self,latency,noise,sig_info = Signal_information):
+        sig_info.update_latency(latency)
+        sig_info.update_noise_power(noise)
+        self._successive()
 
 
 class Network(object):
-    def __init__(self):
-        pass
+    def __init__(self, file='nodes.json'):
+        self._nodes = {}
+        self._lines = {}
+        with open(file, 'r') as file:
+            data = json.load(file)
+            for label,node_data in data.items():
+                node_data['label'] = label
+                node = Node(node_data)
+                self._nodes[label] = node
+
+            # Create Line instances between connected nodes
+            for node in self._nodes.values():
+                for connected_label in node.connected_nodes:
+                    if connected_label in self._nodes:
+                        other_node = self._nodes[connected_label]
+                        distance = self._calculate_distance(node.position, other_node.position)
+                        line_label = f"{node.label}{other_node.label}"
+                        line = Line(line_label, distance)
+                        self._lines[line_label] = line
+
+    def _calculate_distance(self, pos1, pos2):
+        return math.sqrt((pos2[0] - pos1[0]) ** 2 + (pos2[1] - pos1[1]) ** 2)
 
     @property
     def nodes(self):
-        pass
+        return self._nodes
 
     @property
     def lines(self):
-        pass
+        return self._lines
 
     def draw(self):
-        pass
+        fig, ax = plt.subplots()
 
-    # find_paths: given two node labels, returns all paths that connect the 2 nodes
-    # as a list of node labels. Admissible path only if cross any node at most once
-    def find_paths(self, label1, label2):
-        pass
+        # Plot nodes
+        for node in self._nodes.values():
+            x, y = node.position
+            ax.plot(x, y, 'bo')
+            ax.text(x, y, node.label, color="red", fontsize=12, ha="center")
 
-    # connect function set the successive attributes of all NEs as dicts
-    # each node must have dict of lines and viceversa
+        # Plot lines
+        for line in self._lines.values():
+            start_label, end_label = line.label[0], line.label[1]
+            if start_label in self._nodes and end_label in self._nodes:
+                x_values = [self._nodes[start_label].position[0], self._nodes[end_label].position[0]]
+                y_values = [self._nodes[start_label].position[1], self._nodes[end_label].position[1]]
+                ax.plot(x_values, y_values, 'k-')
+
+        plt.xlabel("X Position")
+        plt.ylabel("Y Position")
+        plt.title("Network Topology")
+        plt.grid(True)
+        plt.show()
+
+    def find_paths(self, label1, label2, visited=None):
+        if visited is None:
+            visited = []
+        visited.append(label1)
+        paths = []
+
+        if label1 == label2:
+            return [visited]
+
+        for connected_label in self._nodes[label1].connected_nodes:
+            if connected_label not in visited:
+                new_paths = self.find_paths(connected_label, label2, visited.copy())
+                for path in new_paths:
+                    paths.append(path)
+        return paths
+
     def connect(self):
-        pass
+        for line in self._lines.values():
+            start_node_label = line.label[0]
+            end_node_label = line.label[1]
 
-    # propagate signal_information through path specified in it
-    # and returns the modified spectral information
+            if start_node_label in self._nodes and end_node_label in self._nodes:
+                self._nodes[start_node_label].successive[end_node_label] = line
+                line.successive = {end_node_label: self._nodes[end_node_label]}
+
     def propagate(self, signal_information):
-        pass
+        start_node_label = signal_information.path[0]
+        if start_node_label in self._nodes:
+            self._nodes[start_node_label].propagate(signal_information)
+        return signal_information
+
