@@ -3,8 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from pathlib import Path
-import core.elements
-from core.elements import Signal_information,Node
+from core.elements import Signal_information,Node,Line,Network
 
 # Exercise Lab3: Network
 
@@ -17,30 +16,16 @@ file_input = INPUT_FOLDER / 'nodes.json'
 # Then propagate a Signal Information object of 1mW in the network and save the results in a dataframe.
 # Convert this dataframe in a csv file called 'weighted_path' and finally plot the network.
 # Follow all the instructions in README.md file
-with open('/home/andrea/Desktop/OOn/lab3-network-andrea22-rgb/resources/nodes.json','r') as file:
-    network_data = json.load(file)
 
-nodes = {}
-for label, data in network_data.items():
-    node_info = {
-        'label': label,
-        'position': data['position'],
-        'connected_nodes': data['connected_nodes']
-    }
-    nodes[label] = Node(node_info)
+network = Network(file_input)
+network.connect()
+Path_A_F = network.find_paths("A","C")
 
-# Step 2: Set up successive links based on connected_nodes
-for label, node in nodes.items():
-    successive_links = {}
-    for connected_node_label in node.connected_nodes:
-        if connected_node_label in nodes:
-            successive_links[connected_node_label] = nodes[connected_node_label]
-    node.successive = successive_links
+Sig_info = Signal_information(1e-3,Path_A_F[0])
+print(Sig_info.path)
+Info_path = {'Paths': ['->'.join(path) for path in Path_A_F]}
 
-# Step 3: Create a signal information object with a specific path
-signal_info = Signal_information(10.0, ["A", "D", "E", "F"])
+A_B = network.propagate(Sig_info)
 
-# Step 4: Start the propagation from node A
-nodes["B"].propagate(signal_info)
 
-print(nodes["B"].successive)
+

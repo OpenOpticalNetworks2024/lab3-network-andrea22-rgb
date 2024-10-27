@@ -120,14 +120,19 @@ class Line(object):
     def latency_generation(self):
         latency = 2/3 * parameters.c * self._length
         return latency
-    def noise_generation(self,sig_info = Signal_information):
-        noise = 1*10**(-9)* sig_info.signal_power *self._length
+    def noise_generation(self,sig_power : float):
+        noise = 1e-9* sig_power * self._length
         return noise
+    def propagate(self,sig_info = Signal_information):
+        sig_info.update_latency(self.latency_generation())
+        sig_info.update_noise_power(self.noise_generation(sig_info.signal_power))
 
-    def propagate(self,latency,noise,sig_info = Signal_information):
-        sig_info.update_latency(latency)
-        sig_info.update_noise_power(noise)
-        self._successive()
+        if sig_info.path:
+            next_node = sig_info.path[0]
+            if next_node in self.successive:
+                self.successive[next_node].propagate(sig_info)
+
+
 
 
 class Network(object):
@@ -210,7 +215,7 @@ class Network(object):
                 self._nodes[start_node_label].successive[end_node_label] = line
                 line.successive = {end_node_label: self._nodes[end_node_label]}
 
-    def propagate(self, signal_information):
+    def propagate(self, signal_information = Signal_information):
         start_node_label = signal_information.path[0]
         if start_node_label in self._nodes:
             self._nodes[start_node_label].propagate(signal_information)
