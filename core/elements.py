@@ -1,6 +1,8 @@
 import json
 import math
+from cProfile import label
 
+import pandas as pd
 from matplotlib import pyplot as plt
 from . import parameters
 class Signal_information(object):
@@ -220,4 +222,29 @@ class Network(object):
         if start_node_label in self._nodes:
             self._nodes[start_node_label].propagate(signal_information)
         return signal_information
+
+    def data_frame(self):
+        possible_path=[]
+        for label1 in self._nodes.keys():
+            for label2 in self._nodes.keys():
+                if label1 != label2:
+                    paths = self.find_paths(label1,label2)
+                    for path in paths:
+                        string_path = '--'.join(path)
+
+                        signal_info = Signal_information(1e-3,path)
+                        signal_info = self.propagate(signal_info)
+
+                        SNR = 10 * math.log10(signal_info.signal_power/signal_info.noise_power)
+
+                        possible_path.append({
+                            'Paths': string_path,
+                            'Accumulated latency':signal_info.latency,
+                            'Nois power ':signal_info.noise_power,
+                            'SNR (dB)':SNR
+                        })
+
+        data_frame = pd.DataFrame(possible_path)
+
+        return data_frame
 
